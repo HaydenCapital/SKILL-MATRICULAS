@@ -1,0 +1,22 @@
+# Credenciais — NUNCA commitar
+.env
+
+# Cache e dados gerados
+data/cache/
+data/output/
+data/input/
+
+# Token OAuth
+data/cache/token_cache.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Sistema
+.DS_Store
+Thumbs.db
