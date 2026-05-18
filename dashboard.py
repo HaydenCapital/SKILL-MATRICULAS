@@ -456,7 +456,7 @@ elif st.session_state.etapa in ("match", "concluido"):
                 df_exibir.reset_index(drop=True),
                 disabled=colunas_fixas,
                 hide_index=True,
-                width=None,
+                use_container_width=True,
                 key="editor_revisao",
             )
 
