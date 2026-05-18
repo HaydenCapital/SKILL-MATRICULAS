@@ -69,7 +69,6 @@ Copie `.env.example` para `.env` e preencha com as credenciais do Azure:
 ```env
 GRAPH_TENANT_ID=SEU_TENANT_ID
 GRAPH_CLIENT_ID=SEU_CLIENT_ID
-GRAPH_CLIENT_SECRET=SEU_CLIENT_SECRET
 
 # Remetente produção
 EMAIL_REMETENTE=luiza@haydencapital.com.br

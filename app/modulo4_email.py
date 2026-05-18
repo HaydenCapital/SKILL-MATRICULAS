@@ -1,9 +1,7 @@
-import smtplib
 import time
 import os
 import json
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import html
 from dotenv import load_dotenv
 import pandas as pd
 import msal
@@ -12,9 +10,8 @@ import urllib.parse
 
 load_dotenv()
 
-GRAPH_TENANT_ID     = os.getenv("GRAPH_TENANT_ID", "")
-GRAPH_CLIENT_ID     = os.getenv("GRAPH_CLIENT_ID", "")
-GRAPH_CLIENT_SECRET = os.getenv("GRAPH_CLIENT_SECRET", "")
+GRAPH_TENANT_ID = os.getenv("GRAPH_TENANT_ID", "")
+GRAPH_CLIENT_ID = os.getenv("GRAPH_CLIENT_ID", "")
 
 REMETENTE       = os.getenv("EMAIL_REMETENTE", "")
 NOME_REM        = os.getenv("EMAIL_NOME_REMETENTE", "")
@@ -38,7 +35,7 @@ def _assunto(row: dict, teste: bool) -> str:
 
 
 def _corpo_html(row: dict, modo_teste: bool = False) -> str:
-    nome_cartorio = row.get('cartorio_nome', '').strip()
+    nome_cartorio = html.escape(str(row.get('cartorio_nome') or '').strip())
     saudacao = (
         f"Prezado(a) Oficial de Registro de Imóveis – {nome_cartorio},"
         if nome_cartorio else
@@ -47,6 +44,13 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
     email_sig = REMETENTE_TESTE if (modo_teste and REMETENTE_TESTE) else REMETENTE
     nome_sig  = NOME_REM_TESTE  if (modo_teste and NOME_REM_TESTE)  else NOME_REM
     nome_disp = nome_sig.split("|")[0].strip() if nome_sig else "Hayden Capital"
+
+    denominacao = html.escape(str(row.get('denominacao') or '—'))
+    municipio   = html.escape(str(row.get('municipio')   or '—'))
+    uf_sigla    = html.escape(str(row.get('uf_sigla')    or '—'))
+    comarca     = html.escape(str(row.get('comarca')     or '—'))
+    nirf_crf    = html.escape(str(row.get('nirf_crf')    or '—'))
+    titular     = html.escape(str(row.get('titular')     or '—'))
 
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -72,23 +76,23 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
     <tbody>
       <tr style="background-color:#f2f7fc;">
         <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;color:#555;">Denominação</td>
-        <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;">{row.get('denominacao','—')}</td>
+        <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;">{denominacao}</td>
       </tr>
       <tr>
         <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;color:#555;">Município / UF</td>
-        <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;">{row.get('municipio','—')} – {row.get('uf_sigla','—')}</td>
+        <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;">{municipio} – {uf_sigla}</td>
       </tr>
       <tr style="background-color:#f2f7fc;">
         <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;color:#555;">Comarca</td>
-        <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;">{row.get('comarca','—')}</td>
+        <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;">{comarca}</td>
       </tr>
       <tr>
         <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;color:#555;">Código NIRF / CRF</td>
-        <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;"><strong>{row.get('nirf_crf','—')}</strong></td>
+        <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;"><strong>{nirf_crf}</strong></td>
       </tr>
       <tr style="background-color:#f2f7fc;">
         <td style="padding:5px 14px;color:#555;">Titular</td>
-        <td style="padding:5px 14px;">{row.get('titular','—')}</td>
+        <td style="padding:5px 14px;">{titular}</td>
       </tr>
     </tbody>
   </table>
@@ -127,14 +131,16 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
 def _carregar_cache() -> msal.SerializableTokenCache:
     cache = msal.SerializableTokenCache()
     if os.path.exists(TOKEN_CACHE_PATH):
-        cache.deserialize(open(TOKEN_CACHE_PATH).read())
+        with open(TOKEN_CACHE_PATH, "r", encoding="utf-8") as f:
+            cache.deserialize(f.read())
     return cache
 
 
 def _salvar_cache(cache: msal.SerializableTokenCache):
     os.makedirs(os.path.dirname(TOKEN_CACHE_PATH), exist_ok=True)
     if cache.has_state_changed:
-        open(TOKEN_CACHE_PATH, "w").write(cache.serialize())
+        with open(TOKEN_CACHE_PATH, "w", encoding="utf-8") as f:
+            f.write(cache.serialize())
 
 
 def _obter_token_delegado() -> str:
