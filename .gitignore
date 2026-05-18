@@ -1,12 +1,11 @@
 # Credenciais — NUNCA commitar
 .env
 
-# Cache e dados gerados
-data/cache/
+# Dados gerados
 data/output/
 data/input/
 
-# Token OAuth
+# Token OAuth — nunca commitar
 data/cache/token_cache.json
 
 # Python
