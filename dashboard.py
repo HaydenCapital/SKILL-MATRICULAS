@@ -277,9 +277,13 @@ elif st.session_state.etapa in ("match", "concluido"):
         df_display = df_match[cols_ok].copy()
 
         # Coluna CRI Indicado — município sede do RI, apenas para overrides manuais
-        df_display["cri_indicado"] = df_match.apply(
-            lambda r: r["cartorio_municipio"] if r["match_metodo"] == "override_manual" else "—",
-            axis=1,
+        df_display.insert(
+            df_display.columns.get_loc("comarca") + 1,
+            "cri_indicado",
+            df_match.apply(
+                lambda r: r["cartorio_municipio"] if r["match_metodo"] == "override_manual" else "—",
+                axis=1,
+            ),
         )
 
         df_display = df_display.rename(columns={
@@ -287,11 +291,11 @@ elif st.session_state.etapa in ("match", "concluido"):
             "denominacao":   "Denominacao",
             "municipio":     "Municipio",
             "comarca":       "Comarca",
+            "cri_indicado":  "CRI Indicado",
             "uf_sigla":      "UF",
             "cartorio_nome": "Cartorio",
             "cartorio_email":"E-mail",
             "match_metodo":  "Metodo",
-            "cri_indicado":  "CRI Indicado",
         })
 
         st.dataframe(df_display, hide_index=True, width="stretch")
