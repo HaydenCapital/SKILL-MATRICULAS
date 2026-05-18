@@ -26,7 +26,7 @@ st.set_page_config(
     page_title="Hayden Capital — Consulta de Matrículas",
     page_icon="H",
     layout="wide",
-    initial_sidebar_state="auto",
+    initial_sidebar_state="collapsed",
 )
 
 # ── Identidade visual Hayden Capital ────────────────────────────
@@ -271,30 +271,12 @@ elif st.session_state.etapa in ("match", "concluido"):
 
     df_match = st.session_state.df_match
 
-    # ── Sidebar fixa ─────────────────────────────────────────────
-    with st.sidebar:
-        st.markdown("""
-        <div style="
-            background: linear-gradient(135deg, #111827 0%, #1a2540 100%);
-            border-bottom: 2px solid #c9a84c;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        ">
-            <div style="font-size:1.1rem;font-weight:800;color:#c9a84c;letter-spacing:1px;">
-                HAYDEN CAPITAL
-            </div>
-            <div style="font-size:0.75rem;color:#9ca3af;margin-top:4px;">
-                Consulta de Matrículas · Registro de Imóveis
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown(f"**Arquivo**")
-        st.caption(st.session_state.arquivo_nome)
-        st.markdown(f"**Imóveis carregados:** {len(st.session_state.df_imoveis)}")
-        st.divider()
-        if st.button("Nova busca", type="secondary", use_container_width=True):
+    # ── Barra de ações topo ──────────────────────────────────────
+    col_arq, col_btn = st.columns([6, 1])
+    with col_arq:
+        st.markdown(f"Arquivo: **{st.session_state.arquivo_nome}** · {len(st.session_state.df_imoveis)} imóveis")
+    with col_btn:
+        if st.button("Nova busca", type="secondary"):
             resetar()
             st.rerun()
 
