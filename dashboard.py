@@ -276,9 +276,9 @@ elif st.session_state.etapa in ("match", "concluido"):
                    if c in df_match.columns]
         df_display = df_match[cols_ok].copy()
 
-        # Coluna CRI Indicado — apenas para overrides manuais
+        # Coluna CRI Indicado — município sede do RI, apenas para overrides manuais
         df_display["cri_indicado"] = df_match.apply(
-            lambda r: r["cartorio_nome"] if r["match_metodo"] == "override_manual" else "—",
+            lambda r: r["cartorio_municipio"] if r["match_metodo"] == "override_manual" else "—",
             axis=1,
         )
 
@@ -405,6 +405,75 @@ elif st.session_state.etapa in ("match", "concluido"):
                 "Substitua o arquivo data/overrides/municipio_ri_override.csv no repositório "
                 "e faça commit para que as alterações persistam nos próximos acessos."
             )
+
+        # ── Planilha de revisão ──────────────────────────────────
+        st.divider()
+        st.markdown('<div class="section-title">Planilha de Revisao de RI por Municipio</div>', unsafe_allow_html=True)
+
+        REVISAO_PATH = os.path.join(os.path.dirname(__file__), "data", "overrides", "municipios_sem_ri_para_revisao.xlsx")
+
+        if not os.path.exists(REVISAO_PATH):
+            st.info("Arquivo de revisão não encontrado: data/overrides/municipios_sem_ri_para_revisao.xlsx")
+        else:
+            import io as _io
+            df_rev = pd.read_excel(REVISAO_PATH, header=1)
+
+            COL_SUGERIDO   = "RI Sugerido (distancia)"
+            COL_CONFIRMADO = "RI Confirmado\n(preencher se errado)"
+            COL_DIST       = "Distancia (km)"
+
+            # Renomeia para display mais limpo
+            df_rev = df_rev.rename(columns={COL_CONFIRMADO: "RI Confirmado (preencher se errado)"})
+            COL_CONFIRMADO = "RI Confirmado (preencher se errado)"
+
+            pendentes = df_rev[df_rev[COL_CONFIRMADO].isna() | (df_rev[COL_CONFIRMADO].astype(str).str.strip() == "") | (df_rev[COL_CONFIRMADO].astype(str) == "nan")]
+            preenchidos = len(df_rev) - len(pendentes)
+
+            st.markdown(
+                f"Total: **{len(df_rev)}** municípios · "
+                f"Revisados: **{preenchidos}** · "
+                f"Pendentes: **{len(pendentes)}**"
+            )
+            st.progress(preenchidos / len(df_rev) if len(df_rev) > 0 else 0)
+            st.caption(
+                "Instrucao: se o RI Sugerido estiver correto, nao preencha nada. "
+                "Se estiver errado, escreva o municipio correto na coluna 'RI Confirmado'."
+            )
+
+            st.divider()
+
+            # Filtro
+            mostrar = st.radio(
+                "Exibir",
+                ["Todos", "Apenas pendentes (sem RI Confirmado)"],
+                horizontal=True,
+            )
+            df_exibir = pendentes if mostrar == "Apenas pendentes (sem RI Confirmado)" else df_rev
+
+            # Editor — apenas a coluna RI Confirmado é editável
+            colunas_fixas = [c for c in df_exibir.columns if c != COL_CONFIRMADO]
+            df_editado = st.data_editor(
+                df_exibir.reset_index(drop=True),
+                disabled=colunas_fixas,
+                hide_index=True,
+                width=None,
+                key="editor_revisao",
+            )
+
+            # Salvar edições de volta ao df_rev completo
+            if st.button("Salvar alteracoes e baixar planilha", type="primary"):
+                df_rev.update(df_editado)
+                buf = _io.BytesIO()
+                df_rev.to_excel(buf, index=False)
+                buf.seek(0)
+                st.download_button(
+                    label="Baixar municipios_sem_ri_para_revisao.xlsx atualizado",
+                    data=buf,
+                    file_name="municipios_sem_ri_para_revisao.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="secondary",
+                )
+                st.caption("Substitua o arquivo no repositório e faça commit para persistir as alterações.")
 
     # ────────────────────────────────────────────────────────────
     # ABA 3 — Envio de e-mails
