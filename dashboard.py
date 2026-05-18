@@ -49,6 +49,34 @@ st.markdown("""
         border-radius: 8px;
         margin-bottom: 1.5rem;
     }
+
+    /* Barra superior fixa */
+    .topbar-fixa {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 999;
+        background: linear-gradient(135deg, #111827 0%, #1a2540 100%);
+        border-bottom: 2px solid #c9a84c;
+        padding: 0.7rem 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .topbar-logo {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #c9a84c;
+        letter-spacing: 1px;
+    }
+    .topbar-info {
+        font-size: 0.82rem;
+        color: #9ca3af;
+    }
+    .topbar-spacer {
+        height: 58px;
+    }
     .hayden-logo {
         font-size: 1.8rem;
         font-weight: 800;
@@ -240,10 +268,26 @@ elif st.session_state.etapa in ("match", "concluido"):
 
     df_match = st.session_state.df_match
 
-    # ── Barra de ações topo ──────────────────────────────────────
-    col_arq, col_btn = st.columns([6, 1])
-    with col_arq:
-        st.markdown(f"Arquivo: **{st.session_state.arquivo_nome}** · {len(st.session_state.df_imoveis)} imóveis")
+    # ── Barra fixa no topo ───────────────────────────────────────
+    st.markdown(
+        f"""
+        <div class="topbar-fixa">
+            <div>
+                <div class="topbar-logo">HAYDEN CAPITAL</div>
+                <div class="topbar-info">
+                    Plataforma de Consulta de Matrículas · Registro de Imóveis
+                    &nbsp;·&nbsp;
+                    {st.session_state.arquivo_nome} · {len(st.session_state.df_imoveis)} imóveis
+                </div>
+            </div>
+        </div>
+        <div class="topbar-spacer"></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Botão Nova busca alinhado à direita
+    col_esp, col_btn = st.columns([8, 1])
     with col_btn:
         if st.button("Nova busca", type="secondary"):
             resetar()
