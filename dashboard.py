@@ -272,10 +272,10 @@ elif st.session_state.etapa in ("match", "concluido"):
     st.divider()
 
     # ── Abas ─────────────────────────────────────────────────────
-    tab_resultado, tab_overrides, tab_envio = st.tabs([
+    tab_resultado, tab_envio, tab_overrides = st.tabs([
         "Resultado do Cruzamento",
-        f"Municipios sem RI  ({len(nao_enc)})",
         "Envio de E-mails",
+        f"Municipios sem RI  ({len(nao_enc)})",
     ])
 
     # ────────────────────────────────────────────────────────────
