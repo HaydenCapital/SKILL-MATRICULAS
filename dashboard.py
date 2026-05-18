@@ -474,13 +474,28 @@ elif st.session_state.etapa in ("match", "concluido"):
 
             st.divider()
 
-            # Filtro
-            mostrar = st.radio(
-                "Exibir",
-                ["Todos", "Apenas pendentes (sem RI Confirmado)"],
-                horizontal=True,
-            )
-            df_exibir = pendentes if mostrar == "Apenas pendentes (sem RI Confirmado)" else df_rev
+            # Filtros
+            col_f1, col_f2 = st.columns([2, 3])
+            with col_f1:
+                mostrar = st.radio(
+                    "Exibir",
+                    ["Todos", "Apenas pendentes"],
+                    horizontal=True,
+                )
+            with col_f2:
+                busca = st.text_input(
+                    "Pesquisar município",
+                    placeholder="Ex: Tapejara",
+                )
+
+            df_exibir = pendentes if mostrar == "Apenas pendentes" else df_rev
+
+            if busca.strip():
+                df_exibir = df_exibir[
+                    df_exibir["Municipio"].str.contains(busca.strip(), case=False, na=False)
+                ]
+                if df_exibir.empty:
+                    st.warning(f"Nenhum município encontrado com '{busca}'.")
 
             # Editor — apenas a coluna RI Confirmado é editável
             colunas_fixas = [c for c in df_exibir.columns if c != COL_CONFIRMADO]
