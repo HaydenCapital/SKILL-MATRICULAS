@@ -4,7 +4,7 @@ import sys
 import os
 import tempfile
 import time
-from datetime import datetime
+import unicodedata
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "app"))
 
@@ -13,10 +13,18 @@ from modulo2_cartorios import carregar_cartorios
 from modulo3_match import cruzar
 from modulo4_email import obter_token_streamlit, _graph_enviar, _assunto, _corpo_html, DELAY_ENTRE_ENVIOS
 
+OVERRIDE_PATH = os.path.join(os.path.dirname(__file__), "data", "overrides", "municipio_ri_override.csv")
+
+
+def _norm(s: str) -> str:
+    s = str(s).strip().upper()
+    return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
+
+
 # ── Config ──────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Hayden Capital — Consulta de Matrículas",
-    page_icon="🏛️",
+    page_icon="H",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -24,30 +32,22 @@ st.set_page_config(
 # ── Identidade visual Hayden Capital ────────────────────────────
 st.markdown("""
 <style>
-    /* Fundo geral */
     .stApp { background-color: #0d1117; }
     [data-testid="stAppViewContainer"] { background-color: #0d1117; }
     [data-testid="stHeader"] { background-color: #0d1117; }
-
-    /* Sidebar */
     [data-testid="stSidebar"] { background-color: #111827; }
 
-    /* Tipografia */
     html, body, [class*="css"] {
         font-family: 'Inter', 'Segoe UI', sans-serif;
         color: #e5e7eb;
     }
 
-    /* Header Hayden */
     .hayden-header {
         background: linear-gradient(135deg, #111827 0%, #1a2540 100%);
         border-bottom: 2px solid #c9a84c;
         padding: 1.5rem 2rem;
         border-radius: 8px;
         margin-bottom: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
     }
     .hayden-logo {
         font-size: 1.8rem;
@@ -61,7 +61,6 @@ st.markdown("""
         margin-top: 2px;
     }
 
-    /* Cards de métrica */
     [data-testid="metric-container"] {
         background: #111827;
         border: 1px solid #1f2937;
@@ -75,7 +74,6 @@ st.markdown("""
         font-size: 2rem !important;
     }
 
-    /* Seção */
     .section-title {
         color: #f9fafb;
         font-size: 1.1rem;
@@ -94,7 +92,6 @@ st.markdown("""
         margin-right: 8px;
     }
 
-    /* Upload */
     [data-testid="stFileUploader"] {
         background: #111827;
         border: 2px dashed #374151;
@@ -103,7 +100,6 @@ st.markdown("""
     }
     [data-testid="stFileUploader"]:hover { border-color: #c9a84c; }
 
-    /* Botões */
     .stButton > button {
         border-radius: 6px;
         font-weight: 600;
@@ -128,34 +124,37 @@ st.markdown("""
         background: #c9a84c22 !important;
     }
 
-    /* Dataframe */
     [data-testid="stDataFrame"] {
         border: 1px solid #1f2937;
         border-radius: 8px;
         overflow: hidden;
     }
 
-    /* Expander */
     [data-testid="stExpander"] {
         background: #111827;
         border: 1px solid #1f2937;
         border-radius: 8px;
     }
 
-    /* Divider */
     hr { border-color: #1f2937 !important; }
-
-    /* Checkbox */
     [data-testid="stCheckbox"] label { color: #e5e7eb !important; }
-
-    /* Info / success / warning / error */
     [data-testid="stAlert"] { border-radius: 6px; }
-
-    /* Progress */
     [data-testid="stProgressBar"] > div > div { background-color: #c9a84c !important; }
-
-    /* Caption */
     .stCaption { color: #6b7280 !important; }
+
+    /* Tabs */
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {
+        background: transparent;
+        border-bottom: 1px solid #1f2937;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab"] {
+        color: #9ca3af;
+        font-weight: 500;
+    }
+    [data-testid="stTabs"] [aria-selected="true"] {
+        color: #c9a84c !important;
+        border-bottom: 2px solid #c9a84c !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -172,20 +171,17 @@ st.markdown("""
 
 
 # ── Estado da sessão ────────────────────────────────────────────
-for key in ["df_match", "df_imoveis", "arquivo_nome", "log_enviado", "etapa"]:
+for key in ["df_match", "df_imoveis", "df_cnj", "arquivo_nome", "log_enviado", "etapa"]:
     if key not in st.session_state:
         st.session_state[key] = None
 if st.session_state.etapa is None:
     st.session_state.etapa = "upload"
 
 
-# ── Nova busca ──────────────────────────────────────────────────
 def resetar():
-    st.session_state.df_match    = None
-    st.session_state.df_imoveis  = None
-    st.session_state.arquivo_nome = None
-    st.session_state.log_enviado = None
-    st.session_state.etapa       = "upload"
+    for key in ["df_match", "df_imoveis", "df_cnj", "arquivo_nome", "log_enviado"]:
+        st.session_state[key] = None
+    st.session_state.etapa = "upload"
 
 
 # ════════════════════════════════════════════════════════════════
@@ -214,10 +210,11 @@ if st.session_state.etapa == "upload":
                 df_imoveis = carregar_imoveis(tmp_path)
                 df_cnj     = carregar_cartorios()
                 df_match   = cruzar(df_imoveis, df_cnj)
-                st.session_state.df_match   = df_match
-                st.session_state.df_imoveis = df_imoveis
+                st.session_state.df_imoveis  = df_imoveis
+                st.session_state.df_cnj      = df_cnj
+                st.session_state.df_match    = df_match
                 st.session_state.log_enviado = None
-                st.session_state.etapa = "match"
+                st.session_state.etapa       = "match"
                 st.rerun()
             except Exception as e:
                 st.error(f"Erro ao processar arquivo: {e}")
@@ -226,130 +223,276 @@ if st.session_state.etapa == "upload":
 
 
 # ════════════════════════════════════════════════════════════════
-# ETAPA 2 — Match
+# ETAPA 2 — Resultados
 # ════════════════════════════════════════════════════════════════
-elif st.session_state.etapa in ("match", "envio", "concluido"):
+elif st.session_state.etapa in ("match", "concluido"):
 
     df_match = st.session_state.df_match
 
-    # Barra de ações topo
+    # ── Barra de ações topo ──────────────────────────────────────
     col_arq, col_btn = st.columns([6, 1])
     with col_arq:
-        st.markdown(f"📄 **{st.session_state.arquivo_nome}**  ·  {len(st.session_state.df_imoveis)} imóveis")
+        st.markdown(f"Arquivo: **{st.session_state.arquivo_nome}** · {len(st.session_state.df_imoveis)} imóveis")
     with col_btn:
-        if st.button("↩ Nova busca", type="secondary"):
+        if st.button("Nova busca", type="secondary"):
             resetar()
             st.rerun()
 
     st.divider()
 
-    # ── Métricas ────────────────────────────────────────────────
-    st.markdown('<div class="section-title"><span class="step-badge">2</span>Resultado do cruzamento</div>', unsafe_allow_html=True)
-
+    # ── Métricas ─────────────────────────────────────────────────
     aptos = df_match[
         (df_match["match_metodo"] != "NAO_ENCONTRADO") &
         df_match["cartorio_email"].notna() &
         (df_match["cartorio_email"] != "")
     ]
-    nao_enc   = len(df_match[df_match["match_metodo"] == "NAO_ENCONTRADO"])
-    sem_email = len(df_match[
+    nao_enc   = df_match[df_match["match_metodo"] == "NAO_ENCONTRADO"]
+    sem_email = df_match[
         (df_match["match_metodo"] != "NAO_ENCONTRADO") &
         (df_match["cartorio_email"].isna() | (df_match["cartorio_email"] == ""))
-    ])
+    ]
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Imóveis na base",        len(st.session_state.df_imoveis))
     c2.metric("Cartórios identificados", len(df_match[df_match["match_metodo"] != "NAO_ENCONTRADO"]))
-    c3.metric("Não encontrados",         nao_enc)
-    c4.metric("📧 Prontos para envio",   len(aptos))
+    c3.metric("Não encontrados",         len(nao_enc))
+    c4.metric("Prontos para envio",      len(aptos))
 
-    # ── Tabela ──────────────────────────────────────────────────
-    cols_ok = [c for c in ["nirf_crf","denominacao","municipio","comarca","uf_sigla",
-                            "cartorio_nome","cartorio_email","match_metodo"] if c in df_match.columns]
-    df_display = df_match[cols_ok].rename(columns={
-        "nirf_crf":"NIRF/CRF", "denominacao":"Denominação", "municipio":"Município",
-        "comarca":"Comarca", "uf_sigla":"UF", "cartorio_nome":"Cartório",
-        "cartorio_email":"E-mail", "match_metodo":"Método"
-    })
+    st.divider()
 
-    with st.expander("🔎 Ver detalhes do cruzamento", expanded=True):
+    # ── Abas ─────────────────────────────────────────────────────
+    tab_resultado, tab_overrides, tab_envio = st.tabs([
+        "Resultado do Cruzamento",
+        f"Municipios sem RI  ({len(nao_enc)})",
+        "Envio de E-mails",
+    ])
+
+    # ────────────────────────────────────────────────────────────
+    # ABA 1 — Resultado
+    # ────────────────────────────────────────────────────────────
+    with tab_resultado:
+        cols_ok = [c for c in ["nirf_crf", "denominacao", "municipio", "comarca",
+                                "uf_sigla", "cartorio_nome", "cartorio_email", "match_metodo"]
+                   if c in df_match.columns]
+        df_display = df_match[cols_ok].copy()
+
+        # Coluna CRI Indicado — apenas para overrides manuais
+        df_display["cri_indicado"] = df_match.apply(
+            lambda r: r["cartorio_nome"] if r["match_metodo"] == "override_manual" else "—",
+            axis=1,
+        )
+
+        df_display = df_display.rename(columns={
+            "nirf_crf":      "NIRF/CRF",
+            "denominacao":   "Denominacao",
+            "municipio":     "Municipio",
+            "comarca":       "Comarca",
+            "uf_sigla":      "UF",
+            "cartorio_nome": "Cartorio",
+            "cartorio_email":"E-mail",
+            "match_metodo":  "Metodo",
+            "cri_indicado":  "CRI Indicado",
+        })
+
         st.dataframe(df_display, hide_index=True, width="stretch")
 
-    # ── Disparo ──────────────────────────────────────────────────
-    st.divider()
-    st.markdown('<div class="section-title"><span class="step-badge">3</span>Envio de e-mails</div>', unsafe_allow_html=True)
+    # ────────────────────────────────────────────────────────────
+    # ABA 2 — Municípios sem RI
+    # ────────────────────────────────────────────────────────────
+    with tab_overrides:
+        st.markdown('<div class="section-title">Municipios sem Cartorio de RI identificado</div>', unsafe_allow_html=True)
 
-    if len(aptos) == 0:
-        st.warning("Nenhum cartório com e-mail identificado para envio.")
+        if len(nao_enc) == 0:
+            st.success("Todos os municípios foram identificados. Nenhuma ação necessária.")
+        else:
+            # Carregar overrides existentes
+            if os.path.exists(OVERRIDE_PATH):
+                df_ov = pd.read_csv(OVERRIDE_PATH)
+            else:
+                df_ov = pd.DataFrame(columns=["municipio_norm", "uf_sigla", "municipio_ri_norm", "observacao"])
 
-    elif st.session_state.etapa == "concluido" and st.session_state.log_enviado is not None:
-        df_log    = st.session_state.log_enviado
-        enviados  = len(df_log[df_log["Status"] == "✅ Enviado"])
-        erros     = len(df_log[df_log["Status"].str.startswith("❌")])
-        st.success(f"Envio concluído — {enviados} enviados · {erros} erros")
-        st.dataframe(df_log, hide_index=True, width="stretch")
+            st.markdown(
+                f"**{len(nao_enc)} linha(s)** sem RI identificado. "
+                "Informe o município do cartório competente para cada um:"
+            )
+            st.caption(
+                "O nome deve ser o municipio onde fica o Cartório de RI (ex: Umuarama). "
+                "Após salvar, baixe o CSV e substitua o arquivo data/overrides/ no repositório."
+            )
 
-    else:
-        col_t, col_r = st.columns(2)
+            st.divider()
 
-        with col_t:
-            st.markdown("**🧪 Modo Teste**")
-            st.caption("Todos os e-mails chegam no seu inbox para você conferir o template.")
-            btn_teste = st.button(f"Enviar {len(aptos)} e-mails para meu e-mail", type="secondary")
+            municipios_unicos = nao_enc.drop_duplicates(subset=["municipio_norm", "uf_sigla"])
+            novos_overrides = []
 
-        with col_r:
-            st.markdown("**🚀 Modo Produção**")
-            st.caption("E-mails enviados diretamente para os cartórios. Ação irreversível.")
-            confirmar = st.checkbox("Confirmo o envio para os cartórios reais")
-            btn_real  = st.button(f"Enviar {len(aptos)} e-mails para os cartórios", type="primary", disabled=not confirmar)
+            for _, row in municipios_unicos.iterrows():
+                mun_norm = _norm(str(row.get("municipio_norm", "")))
+                uf       = _norm(str(row.get("uf_sigla", "")))
+                mun_nome = row.get("municipio", mun_norm)
 
-        modo_teste = None
-        if btn_teste:           modo_teste = True
-        elif btn_real and confirmar: modo_teste = False
+                ja_existe = not df_ov[
+                    (df_ov["municipio_norm"].apply(_norm) == mun_norm) &
+                    (df_ov["uf_sigla"].apply(_norm) == uf)
+                ].empty
 
-        if modo_teste is not None:
-            from dotenv import load_dotenv
-            load_dotenv()
-            EMAIL_TESTE = os.getenv("EMAIL_TESTE", "")
+                col_mun, col_input, col_alerta = st.columns([2, 3, 2])
 
-            # Autenticação Microsoft — exibe UI de login se necessário
-            token = obter_token_streamlit(st)
-            if not token:
-                st.stop()
+                with col_mun:
+                    st.markdown(f"**{mun_nome}**")
+                    st.caption(f"UF: {uf}  |  Comarca: {row.get('comarca', '—')}")
 
-            progress = st.progress(0)
-            status_txt = st.empty()
-            logs = []
+                with col_input:
+                    if ja_existe:
+                        ri_atual = df_ov[
+                            (df_ov["municipio_norm"].apply(_norm) == mun_norm) &
+                            (df_ov["uf_sigla"].apply(_norm) == uf)
+                        ]["municipio_ri_norm"].values[0]
+                        st.text_input(
+                            "Municipio do RI competente",
+                            value=ri_atual,
+                            key=f"ri_{mun_norm}_{uf}",
+                            disabled=True,
+                        )
+                    else:
+                        ri_digitado = st.text_input(
+                            "Municipio do RI competente",
+                            placeholder="Ex: Umuarama",
+                            key=f"ri_{mun_norm}_{uf}",
+                        )
+                        if ri_digitado.strip():
+                            novos_overrides.append({
+                                "municipio_norm":   mun_norm,
+                                "uf_sigla":         uf,
+                                "municipio_ri_norm": _norm(ri_digitado),
+                                "observacao":       "MANUAL_DASHBOARD",
+                            })
 
-            try:
-                for i, (_, row) in enumerate(aptos.iterrows(), 1):
-                    rd   = row.to_dict()
-                    dest = EMAIL_TESTE if modo_teste and EMAIL_TESTE else row["cartorio_email"]
-                    try:
-                        _graph_enviar(token, row["cartorio_email"],
-                                      _assunto(rd, modo_teste), _corpo_html(rd, modo_teste), modo_teste)
-                        status = "✅ Enviado"
-                    except Exception as e:
-                        status = f"❌ Erro: {e}"
+                with col_alerta:
+                    if ja_existe:
+                        st.warning("Ja cadastrado")
+                    else:
+                        st.markdown("")
 
-                    logs.append({
-                        "NIRF/CRF":    row.get("nirf_crf"),
-                        "Denominação": row.get("denominacao"),
-                        "Cartório":    row.get("cartorio_nome"),
-                        "E-mail":      row.get("cartorio_email"),
-                        "Método":      row.get("match_metodo"),
-                        "Status":      status,
-                    })
+                st.markdown("---")
 
-                    progress.progress(i / len(aptos))
-                    status_txt.markdown(f"`[{i}/{len(aptos)}]` {status} → **{dest}**")
+            # Botão salvar
+            if novos_overrides:
+                if st.button("Salvar e re-aplicar cruzamento", type="primary"):
+                    df_novos       = pd.DataFrame(novos_overrides)
+                    df_ov_updated  = pd.concat([df_ov, df_novos], ignore_index=True)
+                    os.makedirs(os.path.dirname(OVERRIDE_PATH), exist_ok=True)
+                    df_ov_updated.to_csv(OVERRIDE_PATH, index=False)
 
-                    if i < len(aptos):
-                        time.sleep(DELAY_ENTRE_ENVIOS)
+                    with st.spinner("Re-aplicando cruzamento com novos overrides..."):
+                        df_novo = cruzar(st.session_state.df_imoveis, st.session_state.df_cnj)
+                        st.session_state.df_match = df_novo
 
-                st.session_state.log_enviado = pd.DataFrame(logs)
-                st.session_state.etapa = "concluido"
-                st.rerun()
+                    st.success(f"{len(novos_overrides)} override(s) adicionado(s). Cruzamento atualizado.")
+                    st.rerun()
 
-            except Exception as e:
-                st.error(f"Erro no disparo: {e}")
+            # Download CSV atualizado
+            st.divider()
+            df_ov_dl = pd.read_csv(OVERRIDE_PATH) if os.path.exists(OVERRIDE_PATH) else df_ov
+            csv_bytes = df_ov_dl.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="Baixar CSV de overrides atualizado",
+                data=csv_bytes,
+                file_name="municipio_ri_override.csv",
+                mime="text/csv",
+                type="secondary",
+            )
+            st.caption(
+                "Substitua o arquivo data/overrides/municipio_ri_override.csv no repositório "
+                "e faça commit para que as alterações persistam nos próximos acessos."
+            )
+
+    # ────────────────────────────────────────────────────────────
+    # ABA 3 — Envio de e-mails
+    # ────────────────────────────────────────────────────────────
+    with tab_envio:
+
+        if st.session_state.etapa == "concluido" and st.session_state.log_enviado is not None:
+            df_log   = st.session_state.log_enviado
+            enviados = len(df_log[df_log["Status"] == "Enviado"])
+            erros    = len(df_log[df_log["Status"].str.startswith("Erro")])
+            st.success(f"Envio concluído — {enviados} enviado(s) · {erros} erro(s)")
+            st.dataframe(df_log, hide_index=True, width="stretch")
+
+        elif len(aptos) == 0:
+            st.warning("Nenhum cartório com e-mail identificado para envio.")
+
+        else:
+            col_t, col_r = st.columns(2)
+
+            with col_t:
+                st.markdown("**Modo Teste**")
+                st.caption("Todos os e-mails chegam no seu inbox para conferir o template antes do envio real.")
+                btn_teste = st.button(f"Enviar {len(aptos)} e-mails para meu e-mail", type="secondary")
+
+            with col_r:
+                st.markdown("**Modo Producao**")
+                st.caption("E-mails enviados diretamente para os cartórios. Ação irreversível.")
+                confirmar = st.checkbox("Confirmo o envio para os cartórios reais")
+                btn_real  = st.button(
+                    f"Enviar {len(aptos)} e-mails para os cartórios",
+                    type="primary",
+                    disabled=not confirmar,
+                )
+
+            modo_teste = None
+            if btn_teste:
+                modo_teste = True
+            elif btn_real and confirmar:
+                modo_teste = False
+
+            if modo_teste is not None:
+                from dotenv import load_dotenv
+                load_dotenv()
+                EMAIL_TESTE = os.getenv("EMAIL_TESTE", "")
+
+                # Autenticação Microsoft — exibe UI de login se necessário
+                token = obter_token_streamlit(st)
+                if not token:
+                    st.stop()
+
+                progress   = st.progress(0)
+                status_txt = st.empty()
+                logs       = []
+
+                try:
+                    for i, (_, row) in enumerate(aptos.iterrows(), 1):
+                        rd   = row.to_dict()
+                        dest = EMAIL_TESTE if modo_teste and EMAIL_TESTE else row["cartorio_email"]
+                        try:
+                            _graph_enviar(
+                                token,
+                                row["cartorio_email"],
+                                _assunto(rd, modo_teste),
+                                _corpo_html(rd, modo_teste),
+                                modo_teste,
+                            )
+                            status = "Enviado"
+                        except Exception as e:
+                            status = f"Erro: {e}"
+
+                        logs.append({
+                            "NIRF/CRF":    row.get("nirf_crf"),
+                            "Denominacao": row.get("denominacao"),
+                            "Cartorio":    row.get("cartorio_nome"),
+                            "E-mail":      row.get("cartorio_email"),
+                            "Metodo":      row.get("match_metodo"),
+                            "Status":      status,
+                        })
+
+                        progress.progress(i / len(aptos))
+                        status_txt.markdown(f"[{i}/{len(aptos)}] {status} — {dest}")
+
+                        if i < len(aptos):
+                            time.sleep(DELAY_ENTRE_ENVIOS)
+
+                    st.session_state.log_enviado = pd.DataFrame(logs)
+                    st.session_state.etapa       = "concluido"
+                    st.rerun()
+
+                except Exception as e:
+                    st.error(f"Erro no disparo: {e}")
