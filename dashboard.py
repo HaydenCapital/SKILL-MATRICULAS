@@ -129,6 +129,10 @@ st.markdown("""
         border-radius: 8px;
         overflow: hidden;
     }
+    /* Remove botão de expandir tabela */
+    [data-testid="stDataFrame"] [data-testid="StyledFullScreenButton"] {
+        display: none !important;
+    }
 
     [data-testid="stExpander"] {
         background: #111827;
@@ -298,7 +302,22 @@ elif st.session_state.etapa in ("match", "concluido"):
             "match_metodo":  "Metodo",
         })
 
-        st.dataframe(df_display, hide_index=True, width="stretch")
+        st.dataframe(
+            df_display,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "NIRF/CRF":     st.column_config.TextColumn("NIRF/CRF",     width="small"),
+                "Denominacao":  st.column_config.TextColumn("Denominacao",   width="medium"),
+                "Municipio":    st.column_config.TextColumn("Municipio",     width="medium"),
+                "Comarca":      st.column_config.TextColumn("Comarca",       width="medium"),
+                "CRI Indicado": st.column_config.TextColumn("CRI Indicado",  width="medium"),
+                "UF":           st.column_config.TextColumn("UF",            width="small"),
+                "Cartorio":     st.column_config.TextColumn("Cartorio",      width="large"),
+                "E-mail":       st.column_config.TextColumn("E-mail",        width="large"),
+                "Metodo":       st.column_config.TextColumn("Metodo",        width="medium"),
+            },
+        )
 
     # ────────────────────────────────────────────────────────────
     # ABA 2 — Municípios sem RI
