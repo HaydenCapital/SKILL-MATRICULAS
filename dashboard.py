@@ -26,7 +26,7 @@ st.set_page_config(
     page_title="Hayden Capital — Consulta de Matrículas",
     page_icon="H",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="auto",
 )
 
 # ── Identidade visual Hayden Capital ────────────────────────────
@@ -271,28 +271,30 @@ elif st.session_state.etapa in ("match", "concluido"):
 
     df_match = st.session_state.df_match
 
-    # ── Barra fixa no topo ───────────────────────────────────────
-    st.markdown(
-        f"""
-        <div class="topbar-fixa">
-            <div>
-                <div class="topbar-logo">HAYDEN CAPITAL</div>
-                <div class="topbar-info">
-                    Plataforma de Consulta de Matrículas · Registro de Imóveis
-                    &nbsp;·&nbsp;
-                    {st.session_state.arquivo_nome} · {len(st.session_state.df_imoveis)} imóveis
-                </div>
+    # ── Sidebar fixa ─────────────────────────────────────────────
+    with st.sidebar:
+        st.markdown("""
+        <div style="
+            background: linear-gradient(135deg, #111827 0%, #1a2540 100%);
+            border-bottom: 2px solid #c9a84c;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        ">
+            <div style="font-size:1.1rem;font-weight:800;color:#c9a84c;letter-spacing:1px;">
+                HAYDEN CAPITAL
+            </div>
+            <div style="font-size:0.75rem;color:#9ca3af;margin-top:4px;">
+                Consulta de Matrículas · Registro de Imóveis
             </div>
         </div>
-        <div class="topbar-spacer"></div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """, unsafe_allow_html=True)
 
-    # Botão Nova busca alinhado à direita
-    col_esp, col_btn = st.columns([8, 1])
-    with col_btn:
-        if st.button("Nova busca", type="secondary"):
+        st.markdown(f"**Arquivo**")
+        st.caption(st.session_state.arquivo_nome)
+        st.markdown(f"**Imóveis carregados:** {len(st.session_state.df_imoveis)}")
+        st.divider()
+        if st.button("Nova busca", type="secondary", use_container_width=True):
             resetar()
             st.rerun()
 
