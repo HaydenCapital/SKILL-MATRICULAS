@@ -2,6 +2,18 @@
 
 Automação para identificar o Cartório de Registro de Imóveis competente para imóveis rurais e solicitar o número de matrícula via e-mail.
 
+> **Repositório público.** O código não contém credenciais — todas as chaves de API e senhas são configuradas via variáveis de ambiente (`.env` local ou Secrets no Streamlit Cloud) e nunca são commitadas.
+
+---
+
+## Acesso ao dashboard
+
+O sistema está disponível em:
+
+**[hayden-matriculas.streamlit.app](https://hayden-matriculas.streamlit.app)**
+
+Para solicitar acesso, entre em contato com o administrador do repositório.
+
 ---
 
 ## O que faz
@@ -24,45 +36,54 @@ SKILL MATRICULAS/
 │   ├── modulo3_match.py          # Cruzamento imóveis × cartórios
 │   └── modulo4_email.py          # Disparo de e-mails via Graph API
 ├── data/
-│   ├── cache/                    # Cache da API CNJ e token OAuth (gerado automaticamente)
-│   ├── input/                    # Coloque aqui os Excels de imóveis
-│   ├── output/                   # Logs e resultados gerados
+│   ├── cache/
+│   │   └── cartorios_cnj.csv     # Cache da base CNJ (evita re-download no deploy)
+│   ├── input/                    # Coloque aqui os Excels de imóveis (não commitado)
+│   ├── output/                   # Logs e resultados gerados (não commitado)
 │   └── overrides/
-│       └── municipio_ri_override.csv   # Mapeamento manual município → RI
+│       ├── municipio_ri_override.csv          # Mapeamento município → RI (665 entradas)
+│       └── municipios_sem_ri_para_revisao.xlsx # Planilha de revisão por estado
 ├── dashboard.py                  # Interface Streamlit
 ├── main.py                       # CLI (linha de comando)
-├── gerar_revisao_ri.py           # Gera planilha de revisão de municípios sem RI
+├── gerar_revisao_ri.py           # Gera planilha de sugestões por distância geográfica
 ├── importar_confirmacoes_ri.py   # Importa confirmações para o override CSV
-├── .env                          # Credenciais (NUNCA commitar)
-├── .env.example                  # Modelo de configuração
+├── .env                          # Credenciais (NUNCA commitar — está no .gitignore)
+├── .env.example                  # Modelo de configuração sem dados sensíveis
 └── requirements.txt
 ```
 
 ---
 
-## Instalação
+## Configuração para rodar localmente
+
+### 1. Instalar dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Configurar o `.env`
+### 2. Configurar credenciais
 
-Copie `.env.example` para `.env` e preencha:
+Copie `.env.example` para `.env` e preencha com as credenciais do Azure:
 
 ```env
 GRAPH_TENANT_ID=SEU_TENANT_ID
 GRAPH_CLIENT_ID=SEU_CLIENT_ID
 GRAPH_CLIENT_SECRET=SEU_CLIENT_SECRET
 
-EMAIL_REMETENTE=seu@email.com.br
-EMAIL_NOME_REMETENTE=Nome | Empresa
-EMAIL_TESTE=seu@email.com.br      # E-mail que recebe no modo teste
+# Remetente produção
+EMAIL_REMETENTE=luiza@haydencapital.com.br
+EMAIL_NOME_REMETENTE=Luiza | Hayden Capital
+
+# Remetente teste (e-mails de teste chegam aqui)
+EMAIL_REMETENTE_TESTE=felipess@haydencapital.com.br
+EMAIL_NOME_REMETENTE_TESTE=Felipe Serra Silva | Hayden Capital
+EMAIL_TESTE=felipess@haydencapital.com.br
 ```
 
----
+As credenciais do Azure (Tenant ID, Client ID, Client Secret) estão registradas no App Registration **"Hayden Matriculas Bot"** no portal Azure da empresa.
 
-## Como usar — Dashboard (recomendado)
+### 3. Rodar o dashboard
 
 ```bash
 python -m streamlit run dashboard.py
@@ -70,25 +91,30 @@ python -m streamlit run dashboard.py
 
 Acesse **http://localhost:8501** no navegador.
 
-### Passo a passo
+---
 
-**1. Upload da planilha**
-- Arraste ou selecione o arquivo Excel (`.xls` / `.xlsx`)
-- A aba deve ser `Imóveis Rurais Nacional` com as colunas padrão (NIRF, Município, Comarca, UF, etc.)
+## Como usar o dashboard
 
-**2. Resultado do cruzamento**
-- O sistema exibe quantos imóveis foram identificados e quantos cartórios têm e-mail disponível
-- A tabela mostra o cartório encontrado para cada imóvel e o método de match utilizado
+**Aba 1 — Resultado do Cruzamento**
+- Faça upload do Excel de imóveis (aba `Imóveis Rurais Nacional`)
+- O sistema cruza com a base do CNJ e exibe o cartório identificado para cada imóvel
+- A coluna **CRI Indicado** mostra o município do RI para imóveis mapeados via override manual
 
-**3. Envio de e-mails**
+**Aba 2 — Envio de E-mails**
 
 | Modo | Comportamento |
 |------|--------------|
-| **Teste** | Todos os e-mails chegam no seu inbox (`EMAIL_TESTE`) para conferir o template |
-| **Produção** | E-mails enviados diretamente para os cartórios (requer confirmação via checkbox) |
+| **Teste** | Todos os e-mails chegam no inbox de teste para conferir o template antes do envio real |
+| **Producao** | E-mails enviados diretamente para os cartórios (requer confirmação via checkbox) |
 
-- O progresso é exibido em tempo real
-- Ao final, aparece o log com status de cada envio
+- No primeiro uso da sessão, o sistema solicita login Microsoft via QR code (Device Code Flow)
+- O progresso é exibido em tempo real com status por cartório
+
+**Aba 3 — Municípios sem RI**
+- Lista municípios do Excel que não tiveram cartório identificado automaticamente
+- Permite informar manualmente o RI competente e re-aplicar o cruzamento
+- Inclui a planilha de revisão com 663 municípios mapeados por distância geográfica — é possível pesquisar por nome e corrigir sugestões incorretas
+- Botão para baixar o CSV atualizado e commitar no repositório
 
 ---
 
@@ -113,20 +139,21 @@ Os resultados são salvos em `data/output/` com timestamp.
 
 | Método | Descrição |
 |--------|-----------|
-| `OVERRIDE` | Mapeamento manual em `municipio_ri_override.csv` |
-| `EXATO` | Município do imóvel == município do cartório (mesma UF) |
-| `COMARCA` | Comarca do imóvel == município do cartório |
-| `FUZZY` | Similaridade textual ≥ 90% (rapidfuzz) |
-| `NAO_ENCONTRADO` | Nenhum cartório identificado |
-
-Imóveis `NAO_ENCONTRADO` são ignorados no envio. Para adicioná-los, inclua uma entrada em `data/overrides/municipio_ri_override.csv`.
+| `override_manual` | Mapeamento manual em `municipio_ri_override.csv` |
+| `municipio_exato` | Município do imóvel == município do cartório (mesma UF) |
+| `comarca_como_municipio` | Comarca do imóvel == município do cartório |
+| `fuzzy_comarca` | Similaridade textual ≥ 90% (rapidfuzz) |
+| `NAO_ENCONTRADO` | Nenhum cartório identificado — requer mapeamento manual |
 
 ---
 
 ## Adicionar novos municípios sem RI
 
-Alguns municípios não possuem Cartório de Registro de Imóveis próprio — a competência é de outro município. Para mapeá-los:
+Municípios sem Cartório de Registro de Imóveis próprio precisam ser mapeados para o RI competente da circunscrição. Há duas formas:
 
+**Via dashboard (recomendado):** acesse a aba "Municípios sem RI", informe o município do RI competente e baixe o CSV atualizado para commitar.
+
+**Via CLI:**
 ```bash
 # Gera planilha com sugestões baseadas em distância geográfica
 python gerar_revisao_ri.py --uf PR
@@ -135,27 +162,40 @@ python gerar_revisao_ri.py --uf PR
 python importar_confirmacoes_ri.py
 ```
 
-O arquivo `data/overrides/municipio_ri_override.csv` atualmente cobre **665 municípios** de MT, PR, AM e SP.
+O arquivo `data/overrides/municipio_ri_override.csv` cobre **665 municípios** de MT, PR, AM e SP.
 
 ---
 
 ## Sobre o envio de e-mail
 
-> **Importante:** O envio usa a **Microsoft Graph API com OAuth2 (Device Code Flow)**, não SMTP.
+O envio usa a **Microsoft Graph API com OAuth2 (Device Code Flow)**, não SMTP — necessário porque o Microsoft 365 corporativo bloqueia SMTP AUTH por padrão.
 
-Isso é necessário porque o Microsoft 365 corporativo bloqueia SMTP AUTH por padrão. O fluxo funciona assim:
+**Como funciona:**
+1. Ao clicar em enviar, o sistema exibe um código e um link (`microsoft.com/devicelogin`)
+2. O usuário faz login com sua conta `@haydencapital.com.br` uma única vez por sessão
+3. O token é armazenado em cache local (`data/cache/token_cache.json`) — nunca commitado
+4. No Streamlit Cloud, o login é solicitado a cada nova sessão
 
-1. **Primeiro uso:** ao clicar em enviar, o sistema exibe um código e um link para login no navegador. Faça o login com sua conta corporativa uma única vez.
-2. **Usos seguintes:** o token fica em cache em `data/cache/token_cache.json` e é reutilizado automaticamente (sem novo login).
-3. **Expiração:** se o token expirar (normalmente após 1 hora de inatividade), o login será solicitado novamente.
+**Configuração Azure (já realizada):**
+- App Registration: **"Hayden Matriculas Bot"** — tenant Hayden Capital
+- Permissão delegada: `Mail.Send`
+- Tipo: Public client (Device Code Flow habilitado)
+- Não requer consentimento do administrador
 
-O cache do token **não deve ser commitado** — já está no `.gitignore`.
+---
 
-### Configuração no Azure (já feita)
+## Atualizar a base de cartórios CNJ
 
-A aplicação requer um App Registration no Azure com:
-- Tipo: **Public client** (permite Device Code Flow)
-- Permissão delegada: `Mail.Send` (não requer consentimento do administrador)
+A base é commitada em `data/cache/cartorios_cnj.csv` para evitar re-download no deploy. Para atualizar:
+
+```bash
+python -c "from app.modulo2_cartorios import carregar_cartorios; carregar_cartorios(forcar_download=True)"
+git add data/cache/cartorios_cnj.csv
+git commit -m "feat: atualiza base de cartorios CNJ"
+git push
+```
+
+Recomenda-se atualizar mensalmente ou quando identificar cartórios desatualizados.
 
 ---
 
@@ -163,9 +203,10 @@ A aplicação requer um App Registration no Azure com:
 
 | Biblioteca | Uso |
 |---|---|
-| `pandas` / `openpyxl` | Leitura de Excel |
+| `pandas` / `openpyxl` / `xlrd` | Leitura de Excel |
 | `requests` | Consulta à API CNJ |
 | `msal` | Autenticação OAuth2 Microsoft |
 | `rapidfuzz` | Match fuzzy de nomes de municípios |
 | `streamlit` | Dashboard web |
 | `python-dotenv` | Configuração via `.env` |
+| `unidecode` | Normalização de texto para comparação |
