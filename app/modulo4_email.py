@@ -16,10 +16,12 @@ GRAPH_TENANT_ID     = os.getenv("GRAPH_TENANT_ID", "")
 GRAPH_CLIENT_ID     = os.getenv("GRAPH_CLIENT_ID", "")
 GRAPH_CLIENT_SECRET = os.getenv("GRAPH_CLIENT_SECRET", "")
 
-REMETENTE  = os.getenv("EMAIL_REMETENTE", "")
-NOME_REM   = os.getenv("EMAIL_NOME_REMETENTE", "Felipe | Hayden Capital")
-EMAIL_TESTE = os.getenv("EMAIL_TESTE", "")
-MODO_ENVIO  = os.getenv("MODO_ENVIO", "delegado").lower()
+REMETENTE       = os.getenv("EMAIL_REMETENTE", "")
+NOME_REM        = os.getenv("EMAIL_NOME_REMETENTE", "")
+REMETENTE_TESTE = os.getenv("EMAIL_REMETENTE_TESTE", "")
+NOME_REM_TESTE  = os.getenv("EMAIL_NOME_REMETENTE_TESTE", "")
+EMAIL_TESTE     = os.getenv("EMAIL_TESTE", "")
+MODO_ENVIO      = os.getenv("MODO_ENVIO", "delegado").lower()
 
 DELAY_ENTRE_ENVIOS = 3
 TOKEN_CACHE_PATH   = "data/cache/token_cache.json"
@@ -35,13 +37,16 @@ def _assunto(row: dict, teste: bool) -> str:
     return f"[TESTE] {base}" if teste else base
 
 
-def _corpo_html(row: dict) -> str:
+def _corpo_html(row: dict, modo_teste: bool = False) -> str:
     nome_cartorio = row.get('cartorio_nome', '').strip()
     saudacao = (
         f"Prezado(a) Oficial de Registro de Imóveis – {nome_cartorio},"
         if nome_cartorio else
         "Prezado(a) Oficial de Registro de Imóveis,"
     )
+    email_sig = REMETENTE_TESTE if (modo_teste and REMETENTE_TESTE) else REMETENTE
+    nome_sig  = NOME_REM_TESTE  if (modo_teste and NOME_REM_TESTE)  else NOME_REM
+    nome_disp = nome_sig.split("|")[0].strip() if nome_sig else "Hayden Capital"
 
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -101,9 +106,9 @@ def _corpo_html(row: dict) -> str:
 
   <p style="margin-top:20px;">Atenciosamente,</p>
   <p style="margin:0;">
-    <strong>Felipe Serra Silva</strong><br>
+    <strong>{nome_disp}</strong><br>
     Hayden Capital<br>
-    <a href="mailto:{REMETENTE}" style="color:#1F4E79;">{REMETENTE}</a>
+    <a href="mailto:{email_sig}" style="color:#1F4E79;">{email_sig}</a>
   </p>
 
   <hr style="border:none;border-top:1px solid #e5e5e5;margin-top:28px;">
@@ -223,7 +228,7 @@ def disparar(df_resultado: pd.DataFrame, modo_teste: bool = True) -> pd.DataFram
         dest = EMAIL_TESTE if modo_teste and EMAIL_TESTE else row["cartorio_email"]
         try:
             _graph_enviar(token, row["cartorio_email"],
-                          _assunto(rd, modo_teste), _corpo_html(rd), modo_teste)
+                          _assunto(rd, modo_teste), _corpo_html(rd, modo_teste), modo_teste)
             status = "Enviado"
             print(f"[{i:>3}/{len(df)}] OK   → {dest} | NIRF {row.get('nirf_crf')} | {str(row.get('cartorio_nome',''))[:45]}")
         except Exception as e:
@@ -245,6 +250,90 @@ def disparar(df_resultado: pd.DataFrame, modo_teste: bool = True) -> pd.DataFram
             time.sleep(DELAY_ENTRE_ENVIOS)
 
     return pd.DataFrame(logs)
+
+
+# ─────────────────────────────────────────────
+# Autenticação via Streamlit (sem terminal)
+# ─────────────────────────────────────────────
+
+def obter_token_streamlit(st_ref) -> str:
+    """
+    Gerencia autenticação Microsoft dentro do Streamlit.
+    Retorna o token se disponível; exibe UI de login e retorna "" se aguardando.
+    st_ref = módulo streamlit (passado pelo dashboard para evitar import circular)
+    """
+    import concurrent.futures
+
+    # 1. Token já na sessão (autenticado nesta sessão)
+    if st_ref.session_state.get("msal_token"):
+        return st_ref.session_state["msal_token"]
+
+    cache = _carregar_cache()
+    app   = msal.PublicClientApplication(
+        GRAPH_CLIENT_ID,
+        authority=f"https://login.microsoftonline.com/{GRAPH_TENANT_ID}",
+        token_cache=cache,
+    )
+
+    # 2. Token em cache de disco (login anterior ainda válido)
+    contas = app.get_accounts()
+    if contas:
+        resultado = app.acquire_token_silent(SCOPES, account=contas[0])
+        if resultado and "access_token" in resultado:
+            _salvar_cache(cache)
+            st_ref.session_state["msal_token"] = resultado["access_token"]
+            return resultado["access_token"]
+
+    # 3. Precisa de novo login — iniciar Device Code Flow
+    if "msal_flow" not in st_ref.session_state:
+        flow = app.initiate_device_flow(scopes=SCOPES)
+        if "user_code" not in flow:
+            st_ref.error(f"Erro ao iniciar autenticação Microsoft: {flow}")
+            return ""
+        st_ref.session_state["msal_flow"] = flow
+        st_ref.session_state["msal_app"]  = app
+
+    flow  = st_ref.session_state["msal_flow"]
+    app_s = st_ref.session_state["msal_app"]
+
+    # Exibe UI de login no dashboard
+    st_ref.divider()
+    st_ref.markdown("### 🔐 Login Microsoft necessário")
+    st_ref.markdown(
+        f"Para enviar e-mails, faça login com sua conta **@haydencapital.com.br**:"
+    )
+    col_info, col_btn = st_ref.columns([3, 1])
+    with col_info:
+        st_ref.markdown(
+            f"1. Acesse **[{flow['verification_uri']}]({flow['verification_uri']})**\n"
+            f"2. Digite o código abaixo e aprove o acesso"
+        )
+        st_ref.code(flow["user_code"], language=None)
+        st_ref.caption("O código expira em ~15 min. Após confirmar no browser, clique no botão.")
+    with col_btn:
+        st_ref.markdown("<br><br><br>", unsafe_allow_html=True)
+        if st_ref.button("✅ Já fiz o login", type="primary", key="btn_msal_confirm"):
+            with st_ref.spinner("Verificando autenticação..."):
+                try:
+                    with concurrent.futures.ThreadPoolExecutor() as ex:
+                        future = ex.submit(app_s.acquire_token_by_device_flow, flow)
+                        resultado = future.result(timeout=15)
+                    if "access_token" in resultado:
+                        _salvar_cache(cache)
+                        token = resultado["access_token"]
+                        st_ref.session_state["msal_token"] = token
+                        del st_ref.session_state["msal_flow"]
+                        del st_ref.session_state["msal_app"]
+                        return token
+                    else:
+                        st_ref.error("Login não confirmado. Verifique o browser e tente novamente.")
+                        del st_ref.session_state["msal_flow"]
+                        del st_ref.session_state["msal_app"]
+                except concurrent.futures.TimeoutError:
+                    st_ref.error("Tempo esgotado (15s). Complete o login no browser primeiro.")
+                    del st_ref.session_state["msal_flow"]
+                    del st_ref.session_state["msal_app"]
+    return ""
 
 
 def testar_conexao() -> bool:

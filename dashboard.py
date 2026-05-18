@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "app"))
 from modulo1_leitura import carregar_imoveis
 from modulo2_cartorios import carregar_cartorios
 from modulo3_match import cruzar
-from modulo4_email import _obter_token_delegado, _graph_enviar, _assunto, _corpo_html, DELAY_ENTRE_ENVIOS
+from modulo4_email import obter_token_streamlit, _graph_enviar, _assunto, _corpo_html, DELAY_ENTRE_ENVIOS
 
 # ── Config ──────────────────────────────────────────────────────
 st.set_page_config(
@@ -312,19 +312,22 @@ elif st.session_state.etapa in ("match", "envio", "concluido"):
             load_dotenv()
             EMAIL_TESTE = os.getenv("EMAIL_TESTE", "")
 
+            # Autenticação Microsoft — exibe UI de login se necessário
+            token = obter_token_streamlit(st)
+            if not token:
+                st.stop()
+
             progress = st.progress(0)
             status_txt = st.empty()
             logs = []
 
             try:
-                token = _obter_token_delegado()
-
                 for i, (_, row) in enumerate(aptos.iterrows(), 1):
                     rd   = row.to_dict()
                     dest = EMAIL_TESTE if modo_teste and EMAIL_TESTE else row["cartorio_email"]
                     try:
                         _graph_enviar(token, row["cartorio_email"],
-                                      _assunto(rd, modo_teste), _corpo_html(rd), modo_teste)
+                                      _assunto(rd, modo_teste), _corpo_html(rd, modo_teste), modo_teste)
                         status = "✅ Enviado"
                     except Exception as e:
                         status = f"❌ Erro: {e}"
