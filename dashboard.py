@@ -129,9 +129,16 @@ st.markdown("""
         border-radius: 8px;
         overflow: hidden;
     }
-    /* Remove botão de expandir tabela */
+    /* Remove botão de expandir e handle de redimensionar */
     [data-testid="stDataFrame"] [data-testid="StyledFullScreenButton"] {
         display: none !important;
+    }
+    [data-testid="stDataFrame"] .stDataFrameResizeHandle {
+        display: none !important;
+    }
+    [data-testid="stDataFrame"] iframe {
+        resize: none !important;
+        pointer-events: auto;
     }
 
     [data-testid="stExpander"] {
@@ -302,10 +309,12 @@ elif st.session_state.etapa in ("match", "concluido"):
             "match_metodo":  "Metodo",
         })
 
+        altura = min(38 + len(df_display) * 35, 600)
         st.dataframe(
             df_display,
             hide_index=True,
             use_container_width=True,
+            height=altura,
             column_config={
                 "NIRF/CRF":     st.column_config.TextColumn("NIRF/CRF",     width="small"),
                 "Denominacao":  st.column_config.TextColumn("Denominacao",   width="medium"),
