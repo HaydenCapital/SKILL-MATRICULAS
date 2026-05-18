@@ -50,12 +50,11 @@ st.markdown("""
         margin-bottom: 1.5rem;
     }
 
-    /* Barra superior fixa */
+    /* Barra superior sticky */
     .topbar-fixa {
-        position: fixed;
+        position: -webkit-sticky;
+        position: sticky;
         top: 0;
-        left: 0;
-        right: 0;
         z-index: 999;
         background: linear-gradient(135deg, #111827 0%, #1a2540 100%);
         border-bottom: 2px solid #c9a84c;
@@ -63,6 +62,7 @@ st.markdown("""
         display: flex;
         align-items: center;
         justify-content: space-between;
+        margin-bottom: 1rem;
     }
     .topbar-logo {
         font-size: 1.1rem;
@@ -75,8 +75,11 @@ st.markdown("""
         color: #9ca3af;
     }
     .topbar-spacer {
-        height: 58px;
+        height: 4px;
     }
+    /* Remove padding extra do bloco principal para sticky funcionar */
+    section.main > div { padding-top: 0 !important; }
+    .block-container { padding-top: 1rem !important; }
     .hayden-logo {
         font-size: 1.8rem;
         font-weight: 800;
