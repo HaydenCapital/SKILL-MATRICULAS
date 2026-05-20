@@ -68,7 +68,9 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
     constam abaixo:
   </p>
 
-  <table style="border-collapse:collapse;width:auto;min-width:420px;margin:14px auto;font-size:13px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:14px 0;">
+    <tr><td align="center">
+  <table style="border-collapse:collapse;width:auto;min-width:420px;font-size:13px;">
     <thead>
       <tr style="background-color:#1F4E79;color:white;">
         <th style="padding:6px 14px;text-align:left;font-weight:600;">Campo</th>
@@ -98,6 +100,7 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
       </tr>
     </tbody>
   </table>
+  </td></tr></table>
 
   <p>
     Solicitamos, por gentileza, a confirmação do <strong>número de matrícula</strong>
