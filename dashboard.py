@@ -586,11 +586,13 @@ elif st.session_state.etapa in ("match", "concluido"):
                     disabled=not confirmar,
                 )
 
-            modo_teste = None
+            # Salva modo_teste na session para persistir durante o login Microsoft
             if btn_teste:
-                modo_teste = True
+                st.session_state["modo_envio_pendente"] = True
             elif btn_real and confirmar:
-                modo_teste = False
+                st.session_state["modo_envio_pendente"] = False
+
+            modo_teste = st.session_state.get("modo_envio_pendente")
 
             if modo_teste is not None:
                 from dotenv import load_dotenv
@@ -639,7 +641,9 @@ elif st.session_state.etapa in ("match", "concluido"):
 
                     st.session_state.log_enviado = pd.DataFrame(logs)
                     st.session_state.etapa       = "concluido"
+                    st.session_state.pop("modo_envio_pendente", None)
                     st.rerun()
 
                 except Exception as e:
+                    st.session_state.pop("modo_envio_pendente", None)
                     st.error(f"Erro no disparo: {e}")
