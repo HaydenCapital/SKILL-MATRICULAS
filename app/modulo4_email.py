@@ -29,6 +29,69 @@ SCOPES             = ["Mail.Send"]
 # Template
 # ─────────────────────────────────────────────
 
+LOGO_H_B64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAA6/NlyAAADgUlEQVR4nO2avWscRxTA33v7Id2X"
+    "0JlwQWCcIq6cFAHXRhDIHyCkOQl3ViH/CTFpbDdOkf/gQjqpuQVVqoxNkHuTJiSFiiSduMIn9u"
+    "72uLvRvPCWWyPHLnS7Kzgy82v2g50f82Z2Z+cLwOFwOBwOh8NxM2DedEopkpNer/eRo9VqsRyj"
+    "KDIAwEvktg/M8TxvbW21qtXqN1rrujGmKfeYOUHEFQAIEfFdGIajJEn+PD4+/idLdx23UurOys"
+    "rKvel0WmPmWwAwZeYJIlblGSLqE9HI87zfDg8Pe9d0v8eHxUjFvu8PEPEMEdeJyGPmp/V6/ask"
+    "Sc6NMU+Y+e/ZbHahtX53Nd113JPJRAI6Y+Z1AKgj4o+1Wm1jPB7/AQDPEPEvz/MuJpPJYAF34W"
+    "/4A7a3tx+sra39OhwOH0dR9AuUyM7OzqNGo/HzaDT6ttvtminq8wukxYODA7/f76eNhzHGAwCt"
+    "lJKjF0XRrECjIg1XAACXRKTnbhB3s9mkTqej87oJ8sMSbBRFl1czKte9Xq9oC8riEJcx5n0e5T"
+    "or4LxigiUHEUv99RBYBoFlEFgGgWUQWAaBZRBYBoFlEFiGX7KPpL87GAw8pVShHlLmQERa5oCH"
+    "87711f51XlLH3t7eEJYwYE9rGcDA90qph1LTiCid/Nwws9SsMcbcvrxMY09HTEsRMBEZovTNe4"
+    "2IL+eZK1TLiJg6mPk7IrrPzIUKsNSAjTE8D/htt9t9BSWyu7vbRMTSRk0+lEstmwAo4TvOHDUo"
+    "Eb9MmVS2NFqbm5t4enpaKODM0W63S3mVrf0PE1gGgWUQWAaBZRBYBoFlEFgGgWVQGRJjTLoox8"
+    "ylLM5dJXOW5fYLpEVZ2FJKpflJbyCaeV+aFl23/a+71WqlkwkyEpu7OVtMkzLO6/YhP9zpdGbz"
+    "5VJZqJa+s1/SBABHUTSVk3a77YtbargMN+ZJpJSqBIGwobVeZ+a7RPS0UqncG4/H58z8AwD8Ho"
+    "Zhn5l7R0dH8SLu/f39xnQ6/Xzu/hoAXlQqlQ3ZTYCIz5n5zPf9iziOz09OTpKbrmGU0tdaN8Iw"
+    "vMvMNUSU4dtPcRyPgyCQ7Q4hM99BxFtJksgbEC+y5WEwGDRXV1e/NMbI6r/sLngSx/EkCIIKM1"
+    "eJ6AtE/CwIApn6SQp+Ov9/MG+6bGvRp7YX3dS2pcxbwO1wOBwOh8PhgJviX+tUn7cB0Ai1AAAA"
+    "AElFTkSuQmCC"
+)
+
+
+def _assinatura_simples(nome: str, cargo: str, email: str, tel: str) -> str:
+    """Assinatura em texto simples — sem card visual (modo teste)."""
+    linhas = [f"<strong>{nome}</strong>"]
+    if cargo:
+        linhas.append(cargo)
+    linhas.append("Hayden Capital")
+    if tel:
+        linhas.append(tel)
+    linhas.append(f'<a href="mailto:{email}" style="color:#1F4E79;">{email}</a>')
+    return "<p style='margin:0;line-height:1.8;'>" + "<br>".join(linhas) + "</p>"
+
+
+def _assinatura_card(nome: str, cargo: str, email: str, tel: str) -> str:
+    """Assinatura corporativa card-style — painel branco + cinza (modo produção)."""
+    return f"""<table style="border-collapse:collapse;width:480px;margin:8px 0 24px 0;font-family:Georgia,serif;font-size:12px;">
+    <tr>
+      <td style="width:200px;background:#ffffff;padding:22px 20px;border:1px solid #d8dde3;border-right:none;vertical-align:middle;">
+        <img src="data:image/png;base64,{LOGO_H_B64}"
+             alt="H" width="38" height="38" style="display:block;margin-bottom:14px;opacity:0.75;">
+        <div style="font-size:13px;font-weight:400;color:#2c2c2c;letter-spacing:0.5px;">Hayden Capital</div>
+        <div style="border-top:1px solid #b0b8c4;margin:10px 0;width:120px;"></div>
+        <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:4px;">{nome}</div>
+        <div style="font-size:11px;color:#666;letter-spacing:0.3px;">{cargo}</div>
+      </td>
+      <td style="background:#636363;padding:22px 18px;vertical-align:middle;border:1px solid #636363;">
+        <table cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="padding-bottom:10px;color:#ffffff;font-size:12px;font-family:Arial,sans-serif;">&#128222;&nbsp; {tel}</td></tr>
+          <tr><td style="padding-bottom:10px;font-size:12px;font-family:Arial,sans-serif;">
+            <a href="mailto:{email}" style="color:#ffffff;text-decoration:none;">&#9993;&nbsp; {email}</a>
+          </td></tr>
+          <tr><td style="color:#ffffff;font-size:12px;font-family:Arial,sans-serif;line-height:1.6;">
+            &#128205;&nbsp; Rua Urussui n&#186;125, 4&#186; andar<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Itaim Bibi, S&#227;o Paulo<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CEP: 04.542-050
+          </td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>"""
+
+
 def _assunto(row: dict, teste: bool) -> str:
     base = f"Solicitação de Número de Matrícula – Imóvel Rural | NIRF {row['nirf_crf']}"
     return f"[TESTE] {base}" if teste else base
@@ -114,43 +177,7 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
 
   <p style="margin-top:20px;">Atenciosamente,</p>
 
-  <!-- Assinatura corporativa -->
-  <table style="border-collapse:collapse;width:480px;margin:8px 0 24px 0;font-family:Georgia,serif;font-size:12px;">
-    <tr>
-      <!-- Painel esquerdo branco -->
-      <td style="width:200px;background:#ffffff;padding:22px 20px 22px 20px;border:1px solid #d8dde3;border-right:none;vertical-align:middle;">
-        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAA6/NlyAAADgUlEQVR4nO2avWscRxTA33v7Id2X0JlwQWCcIq6cFAHXRhDIHyCkOQl3ViH/CTFpbDdOkf/gQjqpuQVVqoxNkHuTJiSFiiSduMIn9u72uLvRvPCWWyPHLnS7Kzgy82v2g50f82Z2Z+cLwOFwOBwOh8NxM2DedEopkpNer/eRo9VqsRyjKDIAwEvktg/M8TxvbW21qtXqN1rrujGmKfeYOUHEFQAIEfFdGIajJEn+PD4+/idLdx23UurOysrKvel0WmPmWwAwZeYJIlblGSLqE9HI87zfDg8Pe9d0v8eHxUjFvu8PEPEMEdeJyGPmp/V6/askSc6NMU+Y+e/ZbHahtX53Nd113JPJRAI6Y+Z1AKgj4o+1Wm1jPB7/AQDPEPEvz/MuJpPJYAF34W/4A7a3tx+sra39OhwOH0dR9AuUyM7OzqNGo/HzaDT6ttvtminq8wukxYODA7/f76eNhzHGAwCtlJKjF0XRrECjIg1XAACXRKTnbhB3s9mkTqej87oJ8sMSbBRFl1czKte9Xq9oC8riEJcx5n0e5Tor4LxigiUHEUv99RBYBoFlEFgGgWUQWAaBZRBYBoFlEFiGX7KPpL87GAw8pVShHlLmQERa5oCH87711f51XlLH3t7eEJYwYE9rGcDA90qph1LTiCid/Nwws9SsMcbcvrxMY09HTEsRMBEZovTNe42IL+eZK1TLiJg6mPk7IrrPzIUKsNSAjTE8D/htt9t9BSWyu7vbRMTSRk0+lEstmwAo4TvOHDUoEb9MmVS2NFqbm5t4enpaKODM0W63S3mVrf0PE1gGgWUQWAaBZRBYBoFlEFgGgWVQGRJjTLoox8ylLM5dJXOW5fYLpEVZ2FJKpflJbyCaeV+aFl23/a+71WqlkwkyEpu7OVtMkzLO6/YhP9zpdGbz5VJZqJa+s1/SBABHUTSVk3a77YtbargMN+ZJpJSqBIGwobVeZ+a7RPS0UqncG4/H58z8AwD8HoZhn5l7R0dH8SLu/f39xnQ6/Xzu/hoAXlQqlQ3ZTYCIz5n5zPf9iziOz09OTpKbrmGU0tdaN8IwvMvMNUSU4dtPcRyPgyCQ7Q4hM99BxFtJksgbEC+y5WEwGDRXV1e/NMbI6r/sLngSx/EkCIIKM1eJ6AtE/CwIApn6SQp+Ov9/MG+6bGvRp7YX3dS2pcxbwO1wOBwOh8PhgJviX+tUn7cB0Ai1AAAAAElFTkSuQmCC"
-             alt="H" width="38" height="38" style="display:block;margin-bottom:14px;opacity:0.75;">
-        <div style="font-size:13px;font-weight:400;color:#2c2c2c;letter-spacing:0.5px;">Hayden Capital</div>
-        <div style="border-top:1px solid #b0b8c4;margin:10px 0;width:120px;"></div>
-        <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:4px;">{nome_disp}</div>
-        <div style="font-size:11px;color:#666;letter-spacing:0.3px;">{cargo_sig}</div>
-      </td>
-      <!-- Painel direito cinza escuro -->
-      <td style="background:#636363;padding:22px 18px;vertical-align:middle;border:1px solid #636363;">
-        <table cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="padding-bottom:10px;vertical-align:top;">
-              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAX0lEQVQoU2NkIBIwEqmOgWEUDBoNg0bDxv///2cg1QAGBgaGly9fMjAwMDCQasDJkycZGBgYGEg1AAMYkGoABjAg1QAMYECqARjAgFQDMIABqQZgAANSDSAXAADQ3A8LBNO7kAAAAABJRU5ErkJggg==" alt="📞" width="12" height="12" style="margin-right:6px;vertical-align:middle;">
-              <span style="color:#ffffff;font-size:12px;font-family:Arial,sans-serif;">{tel_sig}</span>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding-bottom:10px;vertical-align:top;">
-              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAaUlEQVQoU2NkIBIwEqmOgWEUDB4Ng0fDxv///2cg1QAGBgaGly9fMjAwMDCQasDJkycZGBgYGEg1AAMYkGoABjAg1QAMYECqARjAgFQDMIABqQZgAANSDSAXAADQ3A8L/////w8fDRsAK80SCbTh5b0AAAAASUVORK5CYII=" alt="✉" width="12" height="12" style="margin-right:6px;vertical-align:middle;">
-              <a href="mailto:{email_sig}" style="color:#ffffff;font-size:12px;font-family:Arial,sans-serif;text-decoration:none;">{email_sig}</a>
-            </td>
-          </tr>
-          <tr>
-            <td style="vertical-align:top;">
-              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAcElEQVQoU2NkIBIwEqmOgWEUDB4Ng0fDxv///2cg1QAGBgaGly9fMjAwMDCQasDJkycZGBgYGEg1AAMYkGoABjAg1QAMYECqARjAgFQDMIABqQZgAANSDSAXAADQ3A8LBg8ePHj48OHDh4+GDQDfSxAJNE3GYAAAAABJRU5ErkJggg==" alt="📍" width="12" height="12" style="margin-right:6px;vertical-align:top;margin-top:2px;">
-              <span style="color:#ffffff;font-size:12px;font-family:Arial,sans-serif;line-height:1.6;">Rua Urussui n&#186;125, 4&#186; andar<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Itaim Bibi, S&#227;o Paulo<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CEP: 04.542-050</span>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+  {_assinatura_simples(nome_disp, cargo_sig, email_sig, tel_sig) if modo_teste else _assinatura_card(nome_disp, cargo_sig, email_sig, tel_sig)}
 
   <hr style="border:none;border-top:1px solid #e5e5e5;margin-top:4px;">
   <p style="font-size:11px;color:#999;margin-top:8px;">
