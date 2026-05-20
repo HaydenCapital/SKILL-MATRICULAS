@@ -41,9 +41,11 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
         if nome_cartorio else
         "Prezado(a) Oficial de Registro de Imóveis,"
     )
-    email_sig = REMETENTE_TESTE if (modo_teste and REMETENTE_TESTE) else REMETENTE
-    nome_sig  = NOME_REM_TESTE  if (modo_teste and NOME_REM_TESTE)  else NOME_REM
-    nome_disp = nome_sig.split("|")[0].strip() if nome_sig else "Hayden Capital"
+    email_sig  = REMETENTE_TESTE if (modo_teste and REMETENTE_TESTE) else REMETENTE
+    nome_sig   = NOME_REM_TESTE  if (modo_teste and NOME_REM_TESTE)  else NOME_REM
+    nome_disp  = nome_sig.split("|")[0].strip() if nome_sig else "Hayden Capital"
+    cargo_sig  = os.getenv("EMAIL_CARGO_TESTE",    "") if modo_teste else os.getenv("EMAIL_CARGO",    "")
+    tel_sig    = os.getenv("EMAIL_TELEFONE_TESTE",  "") if modo_teste else os.getenv("EMAIL_TELEFONE",  "")
 
     denominacao = html.escape(str(row.get('denominacao') or '—'))
     municipio   = html.escape(str(row.get('municipio')   or '—'))
@@ -66,7 +68,7 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
     constam abaixo:
   </p>
 
-  <table style="border-collapse:collapse;width:auto;min-width:420px;margin:14px 0;font-size:13px;">
+  <table style="border-collapse:collapse;width:auto;min-width:420px;margin:14px auto;font-size:13px;">
     <thead>
       <tr style="background-color:#1F4E79;color:white;">
         <th style="padding:6px 14px;text-align:left;font-weight:600;">Campo</th>
@@ -97,25 +99,39 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
     </tbody>
   </table>
 
-  <div style="background:#f0f5fb;border-left:4px solid #1F4E79;padding:12px 16px;margin:18px 0;border-radius:0 6px 6px 0;">
-    <p style="margin:0 0 6px 0;">
-      Solicitamos, por gentileza, a confirmação do <strong>número de matrícula</strong>
-      desse imóvel registrado nessa Serventia, ou, caso não conste em seus registros,
-      que nos informe para que possamos buscar a serventia competente.
-    </p>
-    <p style="margin:0;">
-      Desde já agradecemos a colaboração e nos colocamos à disposição para quaisquer esclarecimentos.
-    </p>
-  </div>
-
-  <p style="margin-top:20px;">Atenciosamente,</p>
-  <p style="margin:0;">
-    <strong>{nome_disp}</strong><br>
-    Hayden Capital<br>
-    <a href="mailto:{email_sig}" style="color:#1F4E79;">{email_sig}</a>
+  <p>
+    Solicitamos, por gentileza, a confirmação do <strong>número de matrícula</strong>
+    desse imóvel registrado nessa Serventia, ou, caso não conste em seus registros,
+    que nos informe para que possamos buscar a serventia competente.
   </p>
 
-  <hr style="border:none;border-top:1px solid #e5e5e5;margin-top:28px;">
+  <p>
+    Desde já agradecemos a colaboração e nos colocamos à disposição para quaisquer esclarecimentos.
+  </p>
+
+  <p style="margin-top:20px;">Atenciosamente,</p>
+
+  <!-- Assinatura corporativa -->
+  <table style="border-collapse:collapse;width:480px;margin:8px 0 24px 0;font-family:Arial,sans-serif;font-size:12px;">
+    <tr>
+      <td style="width:190px;background:#ffffff;padding:18px 16px;border:1px solid #dde3ea;vertical-align:middle;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:#1F4E79;margin-bottom:12px;">HAYDEN CAPITAL</div>
+        <div style="font-size:13px;font-weight:700;color:#111;">{nome_disp}</div>
+        <div style="border-top:1px solid #c0c8d4;margin:8px 0;"></div>
+        <div style="font-size:11px;color:#555;">{cargo_sig}</div>
+      </td>
+      <td style="background:#555555;padding:18px 16px;vertical-align:middle;">
+        <div style="color:#ffffff;margin-bottom:7px;">&#128222; {tel_sig}</div>
+        <div style="color:#ffffff;margin-bottom:7px;">&#9993; <a href="mailto:{email_sig}" style="color:#ffffff;text-decoration:none;">{email_sig}</a></div>
+        <div style="color:#ffffff;line-height:1.5;">&#128205; Rua Urussui n&#186;125, 4&#186; andar<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Itaim Bibi, S&#227;o Paulo<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CEP: 04.542-050
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <hr style="border:none;border-top:1px solid #e5e5e5;margin-top:4px;">
   <p style="font-size:11px;color:#999;margin-top:8px;">
     Esta mensagem é de caráter informativo e destinada exclusivamente ao destinatário indicado.
     Caso tenha recebido por engano, pedimos que nos informe pelo e-mail acima.
