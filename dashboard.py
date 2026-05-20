@@ -45,7 +45,7 @@ st.markdown("""
     .hayden-header {
         background: #0D2850;
         border-bottom: 2px solid #c9a84c;
-        padding: 1.5rem 2rem;
+        padding: 2rem 2rem 1.5rem 2rem;
         border-radius: 8px;
         margin-bottom: 1.5rem;
     }
