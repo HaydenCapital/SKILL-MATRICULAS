@@ -104,11 +104,13 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
         if nome_cartorio else
         "Prezado(a) Oficial de Registro de Imóveis,"
     )
-    email_sig  = REMETENTE_TESTE if (modo_teste and REMETENTE_TESTE) else REMETENTE
-    nome_sig   = NOME_REM_TESTE  if (modo_teste and NOME_REM_TESTE)  else NOME_REM
-    nome_disp  = nome_sig.split("|")[0].strip() if nome_sig else "Hayden Capital"
-    cargo_sig  = os.getenv("EMAIL_CARGO_TESTE",    "") if modo_teste else os.getenv("EMAIL_CARGO",    "")
-    tel_sig    = os.getenv("EMAIL_TELEFONE_TESTE",  "") if modo_teste else os.getenv("EMAIL_TELEFONE",  "")
+    # Assinatura sempre usa dados de produção (Luiza é sempre a remetente)
+    # Modo teste só muda o DESTINO do e-mail, não a assinatura
+    email_sig = REMETENTE
+    nome_sig  = NOME_REM
+    nome_disp = nome_sig.split("|")[0].strip() if nome_sig else "Hayden Capital"
+    cargo_sig = os.getenv("EMAIL_CARGO", "")
+    tel_sig   = os.getenv("EMAIL_TELEFONE", "")
 
     denominacao = html.escape(str(row.get('denominacao') or '—'))
     municipio   = html.escape(str(row.get('municipio')   or '—'))
@@ -177,7 +179,7 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
 
   <p style="margin-top:20px;">Atenciosamente,</p>
 
-  {_assinatura_simples(nome_disp, cargo_sig, email_sig, tel_sig) if modo_teste else _assinatura_card(nome_disp, cargo_sig, email_sig, tel_sig)}
+  {_assinatura_card(nome_disp, cargo_sig, email_sig, tel_sig)}
 
   <hr style="border:none;border-top:1px solid #e5e5e5;margin-top:4px;">
   <p style="font-size:11px;color:#999;margin-top:8px;">
