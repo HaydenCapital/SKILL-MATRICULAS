@@ -98,6 +98,7 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
     comarca     = html.escape(str(row.get('comarca')     or '—'))
     nirf_crf    = html.escape(str(row.get('nirf_crf')    or '—'))
     titular     = html.escape(str(row.get('titular')     or '—'))
+    cpf_cnpj    = html.escape(str(row.get('cpf_cnpj')   or '—'))
 
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -109,8 +110,8 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
   <p>
     A <strong>Hayden Capital</strong> é uma empresa de gestão de ativos com atuação em
     reestruturação e recuperação de crédito. No contexto de nossa análise patrimonial,
-    identificamos um imóvel rural possivelmente registrado nessa Serventia cujos dados
-    constam abaixo:
+    identificamos um imóvel rural em nome de <strong>{titular}</strong> possivelmente
+    registrado nessa Serventia, cujos dados constam abaixo:
   </p>
 
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:14px 0;">
@@ -140,8 +141,12 @@ def _corpo_html(row: dict, modo_teste: bool = False) -> str:
         <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;"><strong>{nirf_crf}</strong></td>
       </tr>
       <tr style="background-color:#f2f7fc;">
-        <td style="padding:5px 14px;color:#555;">Titular</td>
-        <td style="padding:5px 14px;">{titular}</td>
+        <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;color:#555;">Titular</td>
+        <td style="padding:5px 14px;border-bottom:1px solid #e0e0e0;">{titular}</td>
+      </tr>
+      <tr>
+        <td style="padding:5px 14px;color:#555;">CPF / CNPJ</td>
+        <td style="padding:5px 14px;"><strong>{cpf_cnpj}</strong></td>
       </tr>
     </tbody>
   </table>
